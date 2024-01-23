@@ -1,0 +1,90 @@
+Starting from November 28th, 2022 Heroku shuts down their free tier, which means that free Heroku Dynos, Postgres and Redis servers will no longer be available.
+For that reason, we will look at the 5 best Heroku alternatives where you can host your full-stack applications, your backend APIs, or your websites, and all of them offer a free plan. If you have a side project, that you want to host or you just want to deploy your app for testing it somewhere for free you can deploy it in one of these cloud platforms.
+A sample app for demonstrating the deployments can be found in this GitHub repository. It’s a simple Express.js app just so we can verify our deployment.
+So let’s go through the hosting providers one by one and deploy our test app, or you can deploy your real app if you have one.
+Render
+The first one is Render. This is the most similar service to Heroku which offers a free plan on its pricing page.
+They offer services such as
+Static Websites
+Web Services
+PostgreSQL
+Redis
+Cron Jobs
+The sign-up process is pretty straightforward, just select your GitHub or GitLab account, sign up and you are ready to deploy.
+No alt text provided for this image
+Deployment
+To deploy a Node Express application on Render, follow the steps below
+Go to your dashboard and click on the “New” button and choose “Web Service”
+No alt text provided for this image
+Give Render access to the repository which you want to deploy, then search for that repository here and click “Connect”
+No alt text provided for this image
+Choose a name for it, root directory, Environment — you can deploy it with or without Docker, I’m going to choose Docker for this first example, select your region and branch
+No alt text provided for this image
+And in the advanced tab, I will give the Dockerfile path to it ./Dockerfile
+No alt text provided for this image
+That’s it, click on “Create Web Service”
+Render will trigger a deployment now by cloning the provided repo, building the Docker image, and running the container. This might take about 5 minutes to complete.
+Once it’s done, you can see your service running in the logs. To verify that it worked open up the URL provided by Render, you should see the application up and running on that URL.
+No alt text provided for this image
+No alt text provided for this image
+You can monitor the application in the “Logs” tab. If you have any environmental variables add them in the “Environment” tab variables. And you can check out your latest deployments in the “Events” tab.
+Limits
+Web services on the free plan have limits in Render.
+You get 512 MB RAM in the free plan
+The CPU is Shared
+Web services automatically spun down after 15 minutes of inactivity like in Heroku’s free tier. When a new request comes in, Render spins it up again so it can process the request and this can cause a response delay of up to 30 seconds.
+The free plan allows for 750 hours of running time per month across all free Web Services in your account
+Cyclic
+Next, we have Cyclic, a cloud platform focused on full-stack applications. The best thing about Cyclic is that it has no sleep, even with a free tier, meaning that apps do not have to sleep (like in Heroku and Render), wake up, spin up or recycle. All front-ends and back-ends are ready on-demand, immediately, and at all times.
+It’s because there are no servers and each app is deployed entirely on serverless cloud infrastructure.
+Deployment
+Code is deployed as soon as its GitHub repository has been connected to Cyclic. Cyclic will use the GitHub default branch (main/master) to pull the repo contents. Every git push or change to the default branch will trigger a Cyclic deployment. This includes direct pushes as well as pull requests.
+Note: Cyclic launches your app by calling npm start, which means you have to have a start command in your package.json
+After you sign up to Cyclic (this link will give you a 10$ coupon after you sign up), you need to create a new app, and for that click on the “Deploy” button
+No alt text provided for this image
+Go to the “Link Your Own” tab and search for the repository from your GitHub account (You may need to give access to Cyclic for the first time)
+No alt text provided for this image
+After that click “Connect”
+No alt text provided for this image
+Here you can see it installs the dependencies, deploys the app, and gives you the URL where you can access the application. Go to that URL and as you can see your application is successfully deployed
+No alt text provided for this image
+No alt text provided for this image
+Limits
+Cyclic apps also have limits on capacity and usage.
+Their Hard limits are
+30s Maximum request time
+6MB Maximum HTTP request/response payload size
+No streaming of requests or responses
+512MB of ephemeral disk space mounted at /tmp
+5 TB single file size in S3 storage
+Other Platforms
+There are more free alternatives to Heroku like
+Deta
+Deta is free, forever, it is a free cloud crafted.
+Deta Micros(servers) are a lightweight but scalable cloud runtime tied to an HTTP endpoint. Currently only Node.js and Python Micros are supported.
+They provide a CLI that ties your local development workflow to your micro cloud, see: Deta CLI
+To deploy your API on Deta, you need to install and configure the Deta CLI, the process is a bit different depending if you’re on Mac, Windows or Linux, so I will leave the CLI Configuration link here for you to check it out.
+Railway
+Railway is a deployment platform where you can provision infrastructure, develop with that infrastructure locally, and then deploy to the cloud.
+Railway offers a Starter package and 500 hours of usage for free, after that you start to pay for the RAM and CPU which you use, $10 / GB per month and $20 / vCPU per month.
+No alt text provided for this image
+Use the Railway CLI to kickoff a deploy within a service in a project from the command line. The full deployment process on Railway can be found here.
+Fly.io
+Fly.io also provides free allowances
+Resources included for free on all plans:
+Up to 3 shared-cpu-1x 256mb VMs
+3GB persistent volume storage (total)
+160GB outbound data transfer
+Check out the deployment process for Node.js apps
+Resources
+https://blog.heroku.com/next-chapter
+https://render.com
+https://render.com/pricing
+https://www.cyclic.sh
+https://www.cyclic.sh/pricing
+https://www.cyclic.sh/vs-heroku
+https://fly.io
+https://fly.io/docs/about/pricing
+https://www.deta.sh
+https://railway.app
+https://railway.app/pricing
