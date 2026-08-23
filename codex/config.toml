@@ -1,0 +1,16 @@
+# Codex CLI — mirror Cursor status line fields (built-in items only).
+# Reorder anytime in-session with: /statusline
+
+[tui]
+status_line = [
+  "model-with-reasoning",
+  "current-dir",
+  "git-branch",
+  "context-used",
+  "five-hour-limit",
+  "weekly-limit",
+  "fast-mode",
+]
+# Optional extras you can add via /statusline:
+# "project-root", "context-remaining", "context-window-size",
+# "used-tokens", "session-id", "codex-version"

@@ -12,6 +12,7 @@ Personal tooling and agent environment configs.
 | `cursor/mcp.json` | MCP servers (env-based OAuth) |
 | `claude/statusline-command.sh` | Claude Code status line |
 | `claude/settings.json` | Claude Code settings |
+| `codex/config.toml` | Codex TUI status line (model, cwd, git, ctx, rate limits) |
 | `agents/skills/` | Custom Cursor / agent skills |
 | `bin/` | agent-browser handoff + desktop helpers |
 | `shell/bashrc-agents.sh` | SSH → tmux picker, PATH |

@@ -33,6 +33,9 @@ link_or_copy "$ROOT/cursor/mcp.json" "$HOME/.cursor/mcp.json"
 link_or_copy "$ROOT/claude/statusline-command.sh" "$HOME/.claude/statusline-command.sh"
 link_or_copy "$ROOT/claude/settings.json" "$HOME/.claude/settings.json"
 
+mkdir -p "$HOME/.codex"
+link_or_copy "$ROOT/codex/config.toml" "$HOME/.codex/config.toml"
+
 if [[ -d "$ROOT/agents/skills/cursor" ]]; then
   mkdir -p "$HOME/.cursor/skills"
   rsync -a "$ROOT/agents/skills/cursor/" "$HOME/.cursor/skills/"
