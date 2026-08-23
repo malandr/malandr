@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Pass browser control to the human on the agent desktop (VNC/Openbox or local GUI).
+# Usage:
+#   agent-browser-handoff "CAPTCHA on login page"
+#   agent-browser-handoff "Complete 2FA" --wait-url "**/dashboard"
+set -euo pipefail
+
+HANDOFF_DIR="${HOME}/.agent-browser/handoff"
+mkdir -p "$HANDOFF_DIR"
+
+# shellcheck disable=SC1091
+source "${HOME}/.agent-browser/handoff.env" 2>/dev/null || true
+export DISPLAY="${AGENT_BROWSER_DISPLAY:-:1}"
+export XAUTHORITY="${XAUTHORITY:-${HOME}/.Xauthority}"
+NOVNC_URL="${AGENT_DESKTOP_NOVNC_URL:-}"
+
+REASON=""
+WAIT_URL=""
+WAIT_TEXT=""
+TIMEOUT_MS=600000
+URL=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --wait-url) WAIT_URL="$2"; shift 2 ;;
+    --wait-text) WAIT_TEXT="$2"; shift 2 ;;
+    --timeout) TIMEOUT_MS="$2"; shift 2 ;;
+    --url) URL="$2"; shift 2 ;;
+    -h|--help) sed -n '2,6p' "$0"; exit 0 ;;
+    *)
+      if [[ -z "$REASON" ]]; then REASON="$1"; else echo "Unknown: $1" >&2; exit 1; fi
+      shift
+      ;;
+  esac
+done
+
+REASON="${REASON:-Manual intervention needed}"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+SHOT="${HANDOFF_DIR}/${STAMP}.png"
+NOTE="${HANDOFF_DIR}/latest.txt"
+
+if [[ -z "$URL" ]]; then
+  URL="$(agent-browser get url 2>/dev/null || true)"
+fi
+if [[ -z "$URL" || "$URL" == "about:blank" ]]; then
+  echo "No active page URL. Pass --url https://..." >&2
+  exit 1
+fi
+
+STATE="${HANDOFF_DIR}/session-state.json"
+agent-browser state save "$STATE" 2>/dev/null || true
+agent-browser close --all 2>/dev/null || true
+
+echo "Opening headed browser on DISPLAY=${DISPLAY} ..."
+agent-browser --headed --state "$STATE" open "$URL" 2>/dev/null \
+  || agent-browser --headed open "$URL"
+
+agent-browser wait --load networkidle 2>/dev/null || true
+agent-browser screenshot --annotate "$SHOT" 2>/dev/null \
+  || agent-browser screenshot "$SHOT"
+
+cat >"$NOTE" <<NOTEEOF
+handoff_at=${STAMP}
+reason=${REASON}
+url=${URL}
+display=${DISPLAY}
+screenshot=${SHOT}
+wait_url=${WAIT_URL}
+wait_text=${WAIT_TEXT}
+NOTEEOF
+
+cat <<MSGEOF
+
+=== Browser handoff ===
+Reason: ${REASON}
+URL:    ${URL}
+Desktop: DISPLAY ${DISPLAY}
+${NOVNC_URL:+iPad/noVNC: ${NOVNC_URL}
+}Screenshot: ${SHOT}
+
+Complete login / CAPTCHA / 2FA in the browser window.
+When finished, reply "done" in chat.
+
+Resume: agent-browser-handoff-resume
+MSGEOF
+
+if [[ -n "$WAIT_URL" ]]; then
+  echo "Waiting up to $((TIMEOUT_MS / 1000))s for URL ${WAIT_URL}"
+  if agent-browser wait --url "$WAIT_URL" --timeout "$TIMEOUT_MS" 2>/dev/null; then
+    agent-browser snapshot -i
+    echo "Auto-resume: expected URL reached."
+    exit 0
+  fi
+fi
+if [[ -n "$WAIT_TEXT" ]]; then
+  echo "Waiting up to $((TIMEOUT_MS / 1000))s for text '${WAIT_TEXT}'"
+  if agent-browser wait --text "$WAIT_TEXT" --timeout "$TIMEOUT_MS" 2>/dev/null; then
+    agent-browser snapshot -i
+    echo "Auto-resume: expected text appeared."
+    exit 0
+  fi
+fi
+exit 0

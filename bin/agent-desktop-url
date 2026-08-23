@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# shellcheck disable=SC1091
+source "${HOME}/.agent-browser/handoff.env" 2>/dev/null || true
+IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+HOST="$(hostname -s 2>/dev/null || echo host)"
+echo "iPad (IP):   http://${IP}:6080/vnc.html?autoconnect=1&resize=scale"
+echo "iPad (name): http://${HOST}.lan:6080/vnc.html?autoconnect=1&resize=scale"
+[[ -n "${AGENT_DESKTOP_NOVNC_URL:-}" ]] && echo "Configured: ${AGENT_DESKTOP_NOVNC_URL}"

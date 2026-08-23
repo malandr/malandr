@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Resume after the human completes a handoff step.
+set -euo pipefail
+
+HANDOFF_DIR="${HOME}/.agent-browser/handoff"
+NOTE="${HANDOFF_DIR}/latest.txt"
+STATE="${HANDOFF_DIR}/session-state.json"
+SAVE_AUTH=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --save-auth)
+      if [[ -n "${2:-}" && "$2" != --* ]]; then
+        SAVE_AUTH="$2"
+        shift
+      else
+        SAVE_AUTH="${HOME}/.agent-browser/auth/latest-login.json"
+      fi
+      shift
+      ;;
+    -h|--help)
+      echo "Usage: agent-browser-handoff-resume [--save-auth [path]]"
+      exit 0
+      ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+
+# shellcheck disable=SC1091
+source "${HOME}/.agent-browser/handoff.env"
+export DISPLAY="${AGENT_BROWSER_DISPLAY:-:1}"
+export XAUTHORITY="${XAUTHORITY:-${HOME}/.Xauthority}"
+
+if [[ -f "$NOTE" ]]; then
+  echo "Last handoff:"
+  cat "$NOTE"
+  echo
+fi
+
+CURRENT_URL="$(agent-browser get url 2>/dev/null || true)"
+if [[ -z "$CURRENT_URL" || "$CURRENT_URL" == "about:blank" ]]; then
+  SAVED_URL="$(rg '^url=' "$NOTE" 2>/dev/null | cut -d= -f2- || true)"
+  if [[ -n "$SAVED_URL" ]]; then
+    echo "Reopening headed session at ${SAVED_URL} ..."
+    agent-browser close --all 2>/dev/null || true
+    if [[ -f "$STATE" ]]; then
+      agent-browser --headed --state "$STATE" open "$SAVED_URL" 2>/dev/null \
+        || agent-browser --headed open "$SAVED_URL"
+    else
+      agent-browser --headed open "$SAVED_URL"
+    fi
+  fi
+fi
+
+agent-browser wait --load networkidle 2>/dev/null || true
+agent-browser snapshot -i
+CURRENT="$(agent-browser get url 2>/dev/null || true)"
+agent-browser screenshot "${HANDOFF_DIR}/after-handoff.png" 2>/dev/null || true
+
+# Detect failed login (still on login page)
+LOGIN_STILL=0
+if [[ -f "$NOTE" ]] && rg -q '^handoff_type=login' "$NOTE" 2>/dev/null; then
+  if echo "$CURRENT" | rg -qi 'login|signin|sign-in|auth|oauth|sso|accounts\\.'; then
+    SNAPSHOT="$(agent-browser snapshot -i 2>/dev/null || true)"
+    if echo "$SNAPSHOT" | rg -qi 'password|sign in|log in|continue with google|continue with github'; then
+      LOGIN_STILL=1
+    fi
+  fi
+fi
+
+AUTH_PATH="${SAVE_AUTH:-}"
+if [[ -z "$AUTH_PATH" && -f "$NOTE" ]]; then
+  AUTH_PATH="$(rg '^save_auth=' "$NOTE" 2>/dev/null | cut -d= -f2- || true)"
+fi
+
+if [[ "$LOGIN_STILL" -eq 1 ]]; then
+  echo
+  echo "Still looks like a login page. Complete login in the browser, then reply 'done' again."
+  exit 1
+fi
+
+if [[ -n "$AUTH_PATH" ]]; then
+  mkdir -p "$(dirname "$AUTH_PATH")"
+  agent-browser state save "$AUTH_PATH"
+  echo "Saved login session to ${AUTH_PATH}"
+  echo "Reuse later: agent-browser --state ${AUTH_PATH} open <url>"
+fi
+
+echo
+echo "Handoff complete. Current URL: ${CURRENT}"
+echo "Agent can continue automation from the snapshot above."

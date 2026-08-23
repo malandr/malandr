@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# Hand off any login flow to the human (password, OAuth, SSO, magic link, etc.).
+# Opens headed Chrome on the agent desktop (VNC/GUI) — never types credentials for the user.
+#
+# Usage:
+#   agent-browser-handoff-login https://app.example.com/login
+#   agent-browser-handoff-login https://github.com/login --wait-url "**/github.com/**" --save-auth
+#   agent-browser-handoff-login https://accounts.google.com --wait-text "My Account"
+set -euo pipefail
+
+if [[ $# -lt 1 || "$1" == "-h" || "$1" == "--help" ]]; then
+  cat <<'EOF'
+Usage: agent-browser-handoff-login <login-url> [options]
+
+Options:
+  --wait-url <pattern>   Auto-resume when URL matches (e.g. "**/dashboard")
+  --wait-text <text>     Auto-resume when text appears on page
+  --save-auth [path]     After you say "done", persist session (default: ~/.agent-browser/auth/latest-login.json)
+  --timeout <ms>         Wait timeout (default: 600000)
+  --reason <text>        Custom handoff message
+
+After login, reply "done" in Cursor. The agent runs:
+  agent-browser-handoff-resume --save-auth
+EOF
+  exit 0
+fi
+
+LOGIN_URL="$1"
+shift
+
+WAIT_URL=""
+WAIT_TEXT=""
+TIMEOUT_MS=""
+REASON="Please log in (password, OAuth, SSO, or magic link)"
+SAVE_AUTH=""
+SAVE_AUTH_PATH="${HOME}/.agent-browser/auth/latest-login.json"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --wait-url) WAIT_URL="$2"; shift 2 ;;
+    --wait-text) WAIT_TEXT="$2"; shift 2 ;;
+    --timeout) TIMEOUT_MS="$2"; shift 2 ;;
+    --reason) REASON="$2"; shift 2 ;;
+    --save-auth)
+      if [[ -n "${2:-}" && "$2" != --* ]]; then
+        SAVE_AUTH_PATH="$2"
+        shift
+      fi
+      SAVE_AUTH=1
+      shift
+      ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+
+mkdir -p "${HOME}/.agent-browser/auth"
+HANDOFF_DIR="${HOME}/.agent-browser/handoff"
+mkdir -p "$HANDOFF_DIR"
+
+# shellcheck disable=SC1091
+source "${HOME}/.agent-browser/handoff.env"
+export DISPLAY="${AGENT_BROWSER_DISPLAY:-:1}"
+export XAUTHORITY="${XAUTHORITY:-${HOME}/.Xauthority}"
+
+agent-browser close --all 2>/dev/null || true
+
+echo "Opening login page in headed browser on DISPLAY=${DISPLAY} ..."
+agent-browser --headed open "$LOGIN_URL"
+agent-browser wait --load networkidle 2>/dev/null || true
+
+STAMP="$(date +%Y%m%d-%H%M%S)"
+SHOT="${HANDOFF_DIR}/${STAMP}-login.png"
+agent-browser screenshot --annotate "$SHOT" 2>/dev/null || agent-browser screenshot "$SHOT"
+
+NOTE="${HANDOFF_DIR}/latest.txt"
+cat >"$NOTE" <<EOF
+handoff_at=${STAMP}
+handoff_type=login
+reason=${REASON}
+url=${LOGIN_URL}
+display=${DISPLAY}
+screenshot=${SHOT}
+wait_url=${WAIT_URL}
+wait_text=${WAIT_TEXT}
+save_auth=${SAVE_AUTH_PATH}
+EOF
+
+cat <<EOF
+
+=== Login handoff ===
+URL:    ${LOGIN_URL}
+Window: Chrome is open on your agent desktop (VNC/GUI) (display ${DISPLAY})
+Screenshot: ${SHOT}
+
+Log in yourself (any method: password, Google/GitHub OAuth, SSO, magic link, passkey).
+Do not share passwords in chat.
+
+When finished, reply "done" in Cursor chat.
+The agent will run: agent-browser-handoff-resume --save-auth
+EOF
+
+ARGS=( "$REASON" --url "$LOGIN_URL" )
+[[ -n "$WAIT_URL" ]] && ARGS+=( --wait-url "$WAIT_URL" )
+[[ -n "$WAIT_TEXT" ]] && ARGS+=( --wait-text "$WAIT_TEXT" )
+[[ -n "$TIMEOUT_MS" ]] && ARGS+=( --timeout "$TIMEOUT_MS" )
+
+# Reuse wait logic from main handoff script without reopening the browser.
+TIMEOUT_MS="${TIMEOUT_MS:-600000}"
+if [[ -n "$WAIT_URL" ]]; then
+  echo "Optional auto-resume: waiting up to $((TIMEOUT_MS / 1000))s for URL ${WAIT_URL}"
+  if agent-browser wait --url "$WAIT_URL" --timeout "$TIMEOUT_MS" 2>/dev/null; then
+    agent-browser snapshot -i
+    echo "Auto-resume: login redirect detected."
+    exit 0
+  fi
+fi
+if [[ -n "$WAIT_TEXT" ]]; then
+  echo "Optional auto-resume: waiting up to $((TIMEOUT_MS / 1000))s for text '${WAIT_TEXT}'"
+  if agent-browser wait --text "$WAIT_TEXT" --timeout "$TIMEOUT_MS" 2>/dev/null; then
+    agent-browser snapshot -i
+    echo "Auto-resume: expected post-login text appeared."
+    exit 0
+  fi
+fi
+
+exit 0

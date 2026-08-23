@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export DISPLAY="${DISPLAY:-:1}"
+export XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"
+CHROME="${AGENT_CHROME_BIN:-}"
+if [[ -z "$CHROME" ]]; then
+  CHROME=$(ls -d "$HOME"/.agent-browser/browsers/chrome-*/chrome 2>/dev/null | sort -V | tail -1 || true)
+fi
+[[ -n "$CHROME" && -x "$CHROME" ]] || { echo "Chrome not found; run: agent-browser install" >&2; exit 1; }
+PROFILE="${AGENT_CHROME_PROFILE:-$HOME/.breqy/chrome-profile-vnc}"
+mkdir -p "$PROFILE"
+exec "$CHROME" \
+  --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-gpu \
+  --renderer-process-limit=2 --process-per-site --force-low-end-device-mode \
+  --disable-extensions --disable-sync --disable-background-networking \
+  --user-data-dir="$PROFILE" --no-first-run --no-default-browser-check "$@"

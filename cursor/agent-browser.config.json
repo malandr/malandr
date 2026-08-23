@@ -1,0 +1,4 @@
+{
+  "args": "--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu,--renderer-process-limit=2,--force-low-end-device-mode,--disable-extensions,--disable-background-networking",
+  "headed": true
+}

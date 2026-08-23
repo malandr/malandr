@@ -1,0 +1,4 @@
+*.bak.*
+.statusline-usage-cache.json
+**/auth.json
+**/.env
