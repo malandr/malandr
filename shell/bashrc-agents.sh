@@ -1,8 +1,8 @@
 # Sourced from ~/.bashrc — agent / tmux helpers (from malandr/dotfiles)
 export PATH="$HOME/.local/bin:$PATH"
 
-# SSH: auto-attach / create tmux when connecting interactively
-if [[ -n "$SSH_CONNECTION" && -z "$TMUX" && $- == *i* ]]; then
+# Auto-attach / create tmux on any new interactive shell (local or SSH)
+if [[ -z "$TMUX" && $- == *i* ]]; then
     sessions=$(tmux list-sessions -F '#S' 2>/dev/null)
     if [[ -n "$sessions" ]]; then
         session=$(

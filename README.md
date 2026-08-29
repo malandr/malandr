@@ -15,7 +15,7 @@ Personal tooling and agent environment configs.
 | `codex/config.toml` | Codex TUI status line (model, cwd, git, ctx, rate limits) |
 | `agents/skills/` | Custom Cursor / agent skills |
 | `bin/` | agent-browser handoff + desktop helpers |
-| `shell/bashrc-agents.sh` | SSH → tmux picker, PATH |
+| `shell/bashrc-agents.sh` | tmux picker (local + SSH), PATH |
 | `install.sh` | Symlink (or copy) into `$HOME` |
 
 ## Install on a new machine
